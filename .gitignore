@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+*.local
+
+# rust
+rust-core/target
+
+# generated wasm bindings (produced by `npm run build:wasm`)
+src/wasm
+
+.DS_Store
+*.log
