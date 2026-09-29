@@ -5,12 +5,22 @@ import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirro
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { openSearchPanel, search, searchKeymap } from '@codemirror/search'
 import { json } from '@codemirror/lang-json'
-import { oneDark } from '@codemirror/theme-one-dark'
+import { syntaxHighlighting } from '@codemirror/language'
+import { oneDarkTheme } from '@codemirror/theme-one-dark'
+import { jsonDarkHighlight, jsonLightHighlight } from '@/utils/jsonHighlightStyle'
 
-const props = defineProps<{
-  modelValue: string
-  dark?: boolean
-}>()
+const lightExtensions = syntaxHighlighting(jsonLightHighlight)
+const darkExtensions = [oneDarkTheme, syntaxHighlighting(jsonDarkHighlight)]
+
+const props = withDefaults(
+  defineProps<{
+    modelValue: string
+    dark?: boolean
+    wrap?: boolean
+    editable?: boolean
+  }>(),
+  { editable: true },
+)
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
@@ -20,6 +30,7 @@ const host = ref<HTMLDivElement | null>(null)
 let view: EditorView | null = null
 let applyingExternalChange = false
 const themeCompartment = new Compartment()
+const wrapCompartment = new Compartment()
 
 onMounted(() => {
   view = new EditorView({
@@ -32,9 +43,11 @@ onMounted(() => {
         history(),
         search(),
         json(),
-        themeCompartment.of(props.dark ? oneDark : []),
+        themeCompartment.of(props.dark ? darkExtensions : lightExtensions),
+        wrapCompartment.of(props.wrap ? EditorView.lineWrapping : []),
         keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
-        EditorView.lineWrapping,
+        EditorView.editable.of(props.editable),
+        EditorState.readOnly.of(!props.editable),
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !applyingExternalChange) {
             emit('update:modelValue', update.state.doc.toString())
@@ -60,7 +73,14 @@ watch(
 watch(
   () => props.dark,
   (dark) => {
-    view?.dispatch({ effects: themeCompartment.reconfigure(dark ? oneDark : []) })
+    view?.dispatch({ effects: themeCompartment.reconfigure(dark ? darkExtensions : lightExtensions) })
+  },
+)
+
+watch(
+  () => props.wrap,
+  (wrap) => {
+    view?.dispatch({ effects: wrapCompartment.reconfigure(wrap ? EditorView.lineWrapping : []) })
   },
 )
 

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import Toolbar from './components/Toolbar.vue'
-import DropZone from './components/DropZone.vue'
+import InputPane from './components/InputPane.vue'
+import SplitPane from './components/SplitPane.vue'
 import TextView from './components/TextView.vue'
 import TreeView from './components/TreeView.vue'
 import InfoPanel from './components/InfoPanel.vue'
@@ -10,38 +11,19 @@ import { useJsonEngine } from './composables/useJsonEngine'
 
 const engine = useJsonEngine()
 const activeView = ref<'text' | 'tree'>('text')
-const textViewRef = ref<InstanceType<typeof TextView> | null>(null)
+const inputPaneRef = ref<InstanceType<typeof InputPane> | null>(null)
 const isDark = ref(false)
+const wrapLines = ref(false)
 
 const validationOk = computed(() => engine.validation.value?.valid ?? null)
 const hasContent = computed(() => engine.text.value.length > 0)
 
-async function refreshDiagnostics() {
-  await Promise.all([engine.validate(), engine.loadStats()])
-}
-
 async function onFile(file: File) {
   await engine.loadFile(file)
-  await refreshDiagnostics()
-}
-
-async function onPaste(text: string) {
-  engine.loadText(text)
-  await refreshDiagnostics()
-}
-
-async function onFormat() {
-  await engine.format()
-  await refreshDiagnostics()
-}
-
-async function onMinify() {
-  await engine.minify()
-  await refreshDiagnostics()
 }
 
 function onSearch() {
-  if (activeView.value === 'text') textViewRef.value?.openSearch()
+  inputPaneRef.value?.openSearch()
 }
 
 function toggleDark() {
@@ -65,7 +47,7 @@ onBeforeUnmount(() => engine.dispose())
     <header class="flex items-center justify-between border-b border-gray-200 px-4 py-2 dark:border-gray-800">
       <div class="flex items-baseline gap-2">
         <span class="font-mono text-lg font-semibold">JsonX</span>
-        <span class="text-xs text-gray-400">A fast JSON formatter built for large files</span>
+        <span class="text-xs text-gray-400">专为大文件打造的高性能 JSON 格式化工具</span>
       </div>
       <button
         class="rounded-md p-1.5 text-sm text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
@@ -76,25 +58,56 @@ onBeforeUnmount(() => engine.dispose())
     </header>
 
     <Toolbar
-      v-if="hasContent"
       :mode="engine.mode.value"
       :is-busy="engine.isBusy.value"
       :active-view="activeView"
-      @format="onFormat"
-      @minify="onMinify"
-      @validate="engine.validate"
-      @clear="engine.clear"
+      :output-mode="engine.outputMode.value"
+      :wrap="wrapLines"
+      @set-output-mode="engine.setOutputMode"
       @set-view="(v) => (activeView = v)"
       @search="onSearch"
+      @toggle-wrap="wrapLines = !wrapLines"
+      @clear="engine.clear"
+      @refresh="engine.refreshNow"
     />
     <ProgressBar :active="engine.isBusy.value" />
 
     <main class="min-h-0 flex-1">
-      <DropZone v-if="!hasContent" @file="onFile" @paste="onPaste" />
-      <TextView v-else-if="activeView === 'text'" ref="textViewRef" v-model="engine.text.value" :dark="isDark" />
-      <TreeView v-else :text="engine.text.value" :get-children="engine.childrenAt" />
+      <SplitPane>
+        <template #left>
+          <InputPane
+            ref="inputPaneRef"
+            v-model="engine.text.value"
+            :file-name="engine.fileName.value"
+            :dark="isDark"
+            :wrap="wrapLines"
+            @file="onFile"
+          />
+        </template>
+        <template #right>
+          <div v-if="!hasContent" class="flex h-full items-center justify-center text-sm text-gray-400">
+            格式化结果会显示在这里
+          </div>
+          <div v-else-if="engine.outputError.value" class="h-full overflow-auto p-4 text-sm text-red-500">
+            {{ engine.outputError.value }}
+          </div>
+          <TextView
+            v-else-if="activeView === 'text'"
+            :model-value="engine.output.value"
+            :dark="isDark"
+            :wrap="wrapLines"
+            :editable="false"
+          />
+          <TreeView v-else :text="engine.text.value" :get-children="engine.childrenAt" />
+        </template>
+      </SplitPane>
     </main>
 
-    <InfoPanel v-if="hasContent" :file-name="engine.fileName.value" :stats="engine.stats.value" :validation-ok="validationOk" />
+    <InfoPanel
+      v-if="hasContent"
+      :file-name="engine.fileName.value"
+      :stats="engine.stats.value"
+      :validation-ok="validationOk"
+    />
   </div>
 </template>

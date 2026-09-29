@@ -51,7 +51,7 @@ function loadMore() {
 
     <div v-if="expanded">
       <p v-if="isLoading" class="px-2 py-1 text-xs text-gray-400" :style="{ paddingLeft: `${(node.depth + 1) * 16}px` }">
-        Loading…
+        加载中…
       </p>
       <TreeNodeRow
         v-for="child in children.slice(0, visibleCount)"
@@ -66,7 +66,7 @@ function loadMore() {
         :style="{ paddingLeft: `${(node.depth + 1) * 16}px` }"
         @click.stop="loadMore"
       >
-        Load {{ Math.min(PAGE_SIZE, children.length - visibleCount) }} more…
+        加载更多（剩余 {{ children.length - visibleCount }} 项）…
       </button>
     </div>
   </div>

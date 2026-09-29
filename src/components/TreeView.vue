@@ -33,9 +33,9 @@ watch(() => props.text, loadRoot, { immediate: true })
 
 <template>
   <div class="h-full overflow-auto p-2">
-    <p v-if="isLoading" class="p-2 text-sm text-gray-400">Loading…</p>
+    <p v-if="isLoading" class="p-2 text-sm text-gray-400">加载中…</p>
     <p v-else-if="errorMessage" class="p-2 text-sm text-red-500">{{ errorMessage }}</p>
-    <p v-else-if="rootChildren.length === 0" class="p-2 text-sm text-gray-400">Nothing to show yet.</p>
+    <p v-else-if="rootChildren.length === 0" class="p-2 text-sm text-gray-400">暂无内容。</p>
     <template v-else>
       <TreeNodeRow
         v-for="child in rootChildren"

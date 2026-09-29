@@ -1,19 +1,22 @@
 <script setup lang="ts">
 import type { WorkMode } from '@/types'
+import type { OutputMode } from '@/composables/useJsonEngine'
 
 defineProps<{
   mode: WorkMode
   isBusy: boolean
   activeView: 'text' | 'tree'
+  outputMode: OutputMode
+  wrap: boolean
 }>()
 
 const emit = defineEmits<{
-  format: []
-  minify: []
-  validate: []
-  clear: []
+  'set-output-mode': [mode: OutputMode]
   'set-view': [view: 'text' | 'tree']
   search: []
+  'toggle-wrap': []
+  clear: []
+  refresh: []
 }>()
 </script>
 
@@ -21,9 +24,25 @@ const emit = defineEmits<{
   <div
     class="flex items-center gap-1 border-b border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-800 dark:bg-gray-900"
   >
-    <button class="toolbar-btn" :disabled="isBusy" @click="emit('format')">Format</button>
-    <button class="toolbar-btn" :disabled="isBusy" @click="emit('minify')">Minify</button>
-    <button class="toolbar-btn" :disabled="isBusy" @click="emit('validate')">Validate</button>
+    <template v-if="activeView === 'text'">
+      <button
+        class="toolbar-btn"
+        :class="{ 'toolbar-btn--active': outputMode === 'formatted' }"
+        @click="emit('set-output-mode', 'formatted')"
+      >
+        格式化
+      </button>
+      <button
+        class="toolbar-btn"
+        :class="{ 'toolbar-btn--active': outputMode === 'minified' }"
+        @click="emit('set-output-mode', 'minified')"
+      >
+        压缩
+      </button>
+      <div class="mx-1 h-5 w-px bg-gray-300 dark:bg-gray-700" />
+    </template>
+
+    <button class="toolbar-btn" :disabled="isBusy" @click="emit('refresh')">校验</button>
 
     <div class="mx-1 h-5 w-px bg-gray-300 dark:bg-gray-700" />
 
@@ -32,16 +51,25 @@ const emit = defineEmits<{
       :class="{ 'toolbar-btn--active': activeView === 'text' }"
       @click="emit('set-view', 'text')"
     >
-      Text
+      文本
     </button>
     <button
       class="toolbar-btn"
       :class="{ 'toolbar-btn--active': activeView === 'tree' }"
       @click="emit('set-view', 'tree')"
     >
-      Tree
+      树形
     </button>
-    <button class="toolbar-btn" @click="emit('search')">Search</button>
+    <button class="toolbar-btn" @click="emit('search')">搜索</button>
+    <button
+      v-if="activeView === 'text'"
+      class="toolbar-btn"
+      :class="{ 'toolbar-btn--active': wrap }"
+      title="自动换行"
+      @click="emit('toggle-wrap')"
+    >
+      自动换行
+    </button>
 
     <div class="flex-1" />
 
@@ -49,10 +77,10 @@ const emit = defineEmits<{
       v-if="mode === 'large'"
       class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
     >
-      ⚡ Large File Mode
+      ⚡ 大文件模式
     </span>
 
-    <button class="toolbar-btn" @click="emit('clear')">Clear</button>
+    <button class="toolbar-btn" @click="emit('clear')">清空</button>
   </div>
 </template>
 
